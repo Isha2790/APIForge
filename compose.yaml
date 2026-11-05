@@ -1,0 +1,130 @@
+# Start with:  bash scripts/gen-env.sh && docker compose up --build
+# Optional:    docker compose --profile observability up -d     (Prometheus + Grafana)
+x-gateway: &gateway
+  build:
+    context: .
+    dockerfile: gateway/Dockerfile
+  environment: &gateway-env
+    REDIS_HOST: redis
+    MANAGEMENT_URL: http://management:8081
+    INTERNAL_SECRET: ${INTERNAL_SECRET:?run scripts/gen-env.sh to create .env}
+    FAILURE_POLICY: ${FAILURE_POLICY:-fail-closed}
+    ALLOW_PRIVATE_HOSTS: demo-api          # demo only: lets the compose-network upstream resolve to a private IP
+  depends_on:
+    redis:
+      condition: service_healthy
+    management:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: apiforge
+      POSTGRES_USER: apiforge
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?run scripts/gen-env.sh to create .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apiforge"]
+      interval: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 12
+
+  mailpit:                                  # dev mail catcher: every email the app sends lands here, nothing leaves your machine
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"               # inbox UI: http://localhost:8025 (SMTP on 1025 stays inside the Compose network)
+
+  demo-api:                                 # stand-in "customer API"
+    image: hashicorp/http-echo:1.0
+    command: ["-listen=:5678", "-text=Hello from the APIForge demo upstream"]
+
+  management:
+    build:
+      context: .
+      dockerfile: management/Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/apiforge
+      DATABASE_USER: apiforge
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?run scripts/gen-env.sh to create .env}
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:?run scripts/gen-env.sh to create .env}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?run scripts/gen-env.sh to create .env}
+      ALLOWED_PRIVATE_HOSTS: demo-api       # demo only
+      CORS_ORIGINS: http://localhost:3000
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}      # dashboard address used in emailed links
+      MAIL_FROM: ${MAIL_FROM:-APIForge <no-reply@apiforge.local>}
+      SPRING_MAIL_HOST: ${SMTP_HOST:-mailpit}               # dev: Mailpit below; production: your SMTP provider
+      SPRING_MAIL_PORT: ${SMTP_PORT:-1025}
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SMTP_AUTH:-false}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS:-false}
+    ports:
+      - "127.0.0.1:8081:8081"               # loopback only: /internal/** must never be publicly reachable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8091'"]   # actuator port is up once the app has started
+      interval: 5s
+      retries: 24
+
+  gateway:
+    <<: *gateway
+    ports:
+      - "8080:8080"
+
+  gateway2:                                 # second stateless instance: limits must hold across both
+    <<: *gateway
+    ports:
+      - "8082:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8081
+        NEXT_PUBLIC_GATEWAY_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - management
+
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    profiles: [observability]
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,32 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: apiforge-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 500ms          # a slow Redis must not stall the gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 10s
+app:
+  management-url: ${MANAGEMENT_URL:http://localhost:8081}
+  internal-secret: ${INTERNAL_SECRET:development-internal-secret}
+  failure-policy: ${FAILURE_POLICY:fail-closed}      # behaviour when Redis is unavailable: fail-open | fail-closed
+  allow-private-hosts: ${ALLOW_PRIVATE_HOSTS:}        # upstream hosts allowed to resolve to private IPs (demo only)
+  usage-stream-maxlen: 200000
+management:
+  server:
+    port: 8090                # actuator on its own, unpublished port
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        apiforge.request.duration: true

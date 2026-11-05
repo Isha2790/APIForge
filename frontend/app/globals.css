@@ -1,0 +1,16 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+body{background:#0b1020;color:#f1f5f9;font-family:Arial,sans-serif}input,button{outline-offset:3px}input{background:#151d32;border:1px solid #34425d;border-radius:9px;padding:11px;width:100%}button{background:#6366f1;border-radius:9px;padding:10px 16px;font-weight:600}button:hover{background:#818cf8}.panel{background:#121a2e;border:1px solid #293650;border-radius:16px;padding:22px}.muted{color:#9baecb}.pill{font-size:12px;background:#293650;border-radius:20px;padding:5px 10px}
+
+select,textarea{background:#151d32;border:1px solid #34425d;border-radius:9px;padding:10px;color:inherit}
+label{display:block;font-size:12px;color:#9baecb;margin-bottom:4px}
+button.secondary{background:#293650}button.secondary:hover{background:#34425d}
+button.danger{background:#b91c1c}button.danger:hover{background:#dc2626}
+button.small{padding:5px 10px;font-size:13px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1;min-width:130px}
+.stack>*+*{margin-top:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{background:#121a2e;border:1px solid #293650}.tabs button.active{background:#6366f1}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid #293650}th{color:#9baecb;font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.card{background:#151d32;border:1px solid #293650;border-radius:12px;padding:14px}.card b{display:block;font-size:22px;margin-top:4px}
+.notice{background:#1e3a2f;border:1px solid #2f6f55;border-radius:10px;padding:12px;word-break:break-all}.error{background:#3a1e1e;border:1px solid #7a2f2f;border-radius:10px;padding:12px}
+code{background:#151d32;border-radius:6px;padding:2px 6px;font-size:13px}

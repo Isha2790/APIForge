@@ -1,0 +1,40 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: apiforge-management
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/apiforge}
+    username: ${DATABASE_USER:apiforge}
+    password: ${DATABASE_PASSWORD:apiforge}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 500ms
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+app:
+  jwt-secret: ${JWT_SECRET:development-only-secret-change-this-32-chars-long}
+  internal-secret: ${INTERNAL_SECRET:development-internal-secret}
+  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
+  public-url: ${PUBLIC_URL:http://localhost:3000}      # dashboard address used in emailed links
+  mail:
+    from: ${MAIL_FROM:APIForge <no-reply@apiforge.local>}   # SMTP itself is configured with SPRING_MAIL_HOST / _PORT / _USERNAME / _PASSWORD
+  cache-ttl-seconds: 60
+  ssrf:
+    allowed-private-hosts: ${ALLOWED_PRIVATE_HOSTS:}
+  usage:
+    consumer-name: ${USAGE_CONSUMER_NAME:management-1}
+    poll-ms: 1000
+management:
+  server:
+    port: 8091
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
